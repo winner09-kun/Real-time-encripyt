@@ -51,7 +51,9 @@ Passkey pertama berlaku untuk satu sesi server. Pengirim berikutnya harus memaka
 passkey yang sama; restart backend untuk menetapkan passkey baru. Token akses berlaku
 12 jam dan hanya disimpan dalam memori halaman, sehingga setelah refresh atau pindah
 halaman pengguna memasukkan passkey lagi. Passkey tidak disimpan di browser.
-Kunci video diturunkan dari passkey dengan scrypt dan salt acak. Ini password bersama
+Seed key enkripsi video adalah passkey yang dikodekan langsung ke byte UTF-8
+(`seed_key = passkey.encode("utf-8")`). Scrypt dan salt acak hanya dipakai untuk
+memverifikasi passkey saat menghubungkan pengirim/penerima. Ini password bersama
 untuk demo, bukan passkey WebAuthn. Untuk akses jaringan, gunakan HTTPS/WSS.
 Algoritma Chaos/Vigenere tetap merupakan algoritma demonstrasi.
 
@@ -62,7 +64,7 @@ Algoritma Chaos/Vigenere tetap merupakan algoritma demonstrasi.
   transformasi jaringan yang sesungguhnya terjadi. Halaman `/noise` sudah
   menampilkan catatan ini secara eksplisit ke dosen.
 - Parameter chaos (`x0`, `r`) ada di `backend/main.py` (`X0`, `R`).
-  Kunci Vigenere video berasal dari passkey; `SEED_KEY` hanya untuk sampel edukasi.
+  Kunci Vigenere video sama dengan byte UTF-8 passkey; `DEMO_SEED_KEY` hanya untuk sampel edukasi.
 - `crypto_core.py` sudah diverifikasi round-trip (`encrypt_frame` →
   `decrypt_frame` menghasilkan frame identik) dan divektorisasi dengan
   NumPy supaya sanggup mengejar frame rate real-time (bukan loop

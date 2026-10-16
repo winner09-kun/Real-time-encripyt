@@ -53,7 +53,7 @@ app.add_middleware(
 TARGET_WIDTH = 480  # frame di-resize supaya chaos+vigenere sanggup mengejar frame rate
 JPEG_QUALITY = 70
 X0, R = 0.437, 3.9789
-SEED_KEY = b"KELOMPOK2-VIGENERE256-KEY"
+DEMO_SEED_KEY = b"DEMO-ONLY"
 
 
 @dataclass
@@ -72,7 +72,7 @@ class SharedState:
 
 
 state = SharedState()
-pipeline = VideoSecurityPipeline(x0=X0, r=R, seed_key=SEED_KEY)
+pipeline: VideoSecurityPipeline | None = None
 passkey_salt = secrets.token_bytes(16)
 passkey_digest: bytes | None = None
 pair_lock = asyncio.Lock()
@@ -98,7 +98,8 @@ async def pair(body: PairRequest):
             raise HTTPException(401, "Passkey tidak cocok. Masukkan passkey dari pengirim.")
         if passkey_digest is None:
             passkey_digest = digest
-            pipeline = VideoSecurityPipeline(x0=X0, r=R, seed_key=digest)
+            # Passkey adalah seed enkripsi; scrypt hanya untuk verifikasi akses.
+            pipeline = VideoSecurityPipeline(x0=X0, r=R, seed_key=body.passkey.encode("utf-8"))
             async with state.lock:
                 state.original = state.noise = state.decrypted = None
                 state.key_ready = True
@@ -143,8 +144,8 @@ async def capture_loop():
         frame = cv2.resize(frame, (TARGET_WIDTH, int(h * scale)))
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        noise_frame = pipeline.encrypt_frame(frame_rgb) if passkey_digest is not None else None
-        decrypted_frame = pipeline.decrypt_frame(noise_frame) if noise_frame is not None else None
+        noise_frame = pipeline.encrypt_frame(frame_rgb) if pipeline is not None else None
+        decrypted_frame = pipeline.decrypt_frame(noise_frame) if pipeline is not None and noise_frame is not None else None
         decrypt_ok = decrypted_frame is not None and np.array_equal(frame_rgb, decrypted_frame)
 
         now = time.time()
@@ -264,7 +265,7 @@ async def trace_mini(x: int | None = None, y: int | None = None, acak: bool = Fa
         h, w = frame.shape[:2]
         x = int(np.random.randint(0, w - 3))
         y = int(np.random.randint(0, h - 3))
-    return build_trace(frame, X0, R, SEED_KEY, raw_size, x, y)
+    return build_trace(frame, X0, R, DEMO_SEED_KEY, raw_size, x, y)
 
 
 @app.get("/")

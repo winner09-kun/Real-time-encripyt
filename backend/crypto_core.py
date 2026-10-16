@@ -128,7 +128,7 @@ class AutoKeyVigenere256:
 
 
 class VideoSecurityPipeline:
-    def __init__(self, x0: float = 0.437, r: float = 3.9789, seed_key: bytes = b"KELOMPOK2-VIGENERE256-KEY"):
+    def __init__(self, x0: float = 0.437, r: float = 3.9789, *, seed_key: bytes):
         self.chaos = ChaosPermutation(x0=x0, r=r)
         self.vigenere = AutoKeyVigenere256(seed_key)
         self.x0 = x0
