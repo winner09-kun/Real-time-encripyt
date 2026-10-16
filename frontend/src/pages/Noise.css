@@ -1,0 +1,15 @@
+.noise-page {
+  --page-accent: var(--hazard);
+}
+
+.hazard-banner {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--hazard);
+  background: var(--hazard-dim);
+  border: 1px dashed var(--hazard);
+  border-radius: 4px;
+  padding: 10px 12px;
+  line-height: 1.5;
+}

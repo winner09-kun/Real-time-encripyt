@@ -1,0 +1,29 @@
+.metric-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+
+.metric-row:last-child {
+  border-bottom: none;
+}
+
+.metric-row-label {
+  font-size: 12px;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+.metric-row-value {
+  font-size: 13px;
+  color: var(--text-0);
+  text-align: right;
+  word-break: break-word;
+}
+
+.metric-row-value--ok { color: var(--ok); }
+.metric-row-value--warn { color: var(--warn); }
+.metric-row-value--err { color: var(--err); }

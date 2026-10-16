@@ -1,0 +1,68 @@
+:root {
+  /* --- base palette (broadcast/NOC control-room, bukan SaaS) --- */
+  --bg-0: #08090b;         /* dasar layar, hitam-biru pekat solid */
+  --bg-1: #101317;         /* panel */
+  --bg-2: #171b20;         /* panel terangkat / hover */
+  --line: #262c34;         /* hairline border */
+  --line-strong: #3a424c;
+
+  --text-0: #e7eaee;
+  --text-1: #9aa4b0;
+  --text-2: #5e6773;
+
+  /* --- warna fungsional, bukan estetik --- */
+  --ok: #33d17a;           /* koneksi / dekripsi berhasil */
+  --ok-dim: #143621;
+  --warn: #f0a83c;         /* menunggu kunci / sinkronisasi */
+  --warn-dim: #3a2c12;
+  --err: #ff5a5a;          /* dekripsi gagal / kunci tidak cocok */
+  --err-dim: #3a1616;
+
+  /* aksen khusus halaman /noise: representasi data mentah berbahaya di jaringan */
+  --hazard: #ff5f2e;
+  --hazard-dim: #331c12;
+
+  --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --topbar-h: 52px;
+  --strip-h: 22px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-0);
+  color: var(--text-0);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--ok-dim);
+}
+
+/* respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

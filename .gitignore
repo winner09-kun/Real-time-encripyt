@@ -1,0 +1,63 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# Python environments and caches
+venv/
+.venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Dependencies, generated builds, and caches
+node_modules/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+*.local
+coverage/
+.nyc_output/
+# Keep package-lock.json for reproducible installs.
+
+# Local editor and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.iml
+*.swp
+*.swo
+*.bak
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Logs, archives, and local recordings
+*.log
+logs/
+*.rar
+*.zip
+*.7z
+uploads/
+media/
+*.mp4
+*.mkv
+*.avi
+*.mov
