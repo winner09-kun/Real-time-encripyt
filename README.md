@@ -10,7 +10,36 @@ backend/    FastAPI + OpenCV — capture webcam, enkripsi/dekripsi, 3 channel We
 frontend/   React + Vite + TypeScript + React Router — 3 halaman + top bar bersama
 ```
 
-## Menjalankan backend
+## Menjalankan dari satu terminal
+
+Setelah dependensi backend dan frontend terpasang (langkah di bawah), jalankan
+dari folder utama `video-dashboard`:
+
+```bash
+npm run dev
+```
+
+Perintah ini menjalankan backend dan frontend sekaligus. Buka
+`http://localhost:3000/pengirim`. Tekan **Ctrl+C** untuk menghentikan keduanya.
+Tidak perlu `npm install` di folder utama; launcher memakai Node.js tanpa
+dependensi tambahan. Matikan server yang sebelumnya berjalan di terminal lain
+agar port 8000 dan 3000 tersedia.
+
+## Menyiapkan backend / menjalankan terpisah
+
+Di Windows PowerShell, instal dependensi sekali:
+
+```powershell
+cd backend
+python -m venv venv
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
+cd ..
+cd frontend
+npm install
+cd ..
+```
+
+Untuk menjalankan backend secara terpisah, atau menyiapkannya di macOS/Linux:
 
 ```bash
 cd backend
@@ -45,7 +74,7 @@ VITE_WS_BASE=ws://ALAMAT_BACKEND:8000 npm run dev
 
 1. Buka `/pengirim`, masukkan passkey 8–128 karakter, lalu klik **Aktifkan pengirim**.
 2. Buka `/penerima`, masukkan passkey yang sama, lalu klik **Hubungkan penerima**.
-3. Passkey yang salah ditolak backend dan video tetap terkunci. Tombol **Kunci kembali** menutup akses video pada halaman tersebut.
+3. Di penerima, passkey yang salah tetap dipakai untuk dekripsi: hasil yang rusak/noise tetap tampil dengan status **GAGAL DEKRIPSI**. Klik **Ganti passkey** untuk mencoba lagi. Setiap penerima memakai kuncinya sendiri.
 
 Passkey pertama berlaku untuk satu sesi server. Pengirim berikutnya harus memakai
 passkey yang sama; restart backend untuk menetapkan passkey baru. Token akses berlaku
@@ -53,11 +82,27 @@ passkey yang sama; restart backend untuk menetapkan passkey baru. Token akses be
 halaman pengguna memasukkan passkey lagi. Passkey tidak disimpan di browser.
 Seed key enkripsi video adalah passkey yang dikodekan langsung ke byte UTF-8
 (`seed_key = passkey.encode("utf-8")`). Scrypt dan salt acak hanya dipakai untuk
-memverifikasi passkey saat menghubungkan pengirim/penerima. Ini password bersama
+memverifikasi passkey saat menghubungkan pengirim. Penerima tidak ditolak karena
+kuncinya berbeda; status kecocokan dihitung dari frame hasil dekripsi penerima.
+Token penerima tidak dapat membuka feed asli pengirim. Ini password bersama
 untuk demo, bukan passkey WebAuthn. Untuk akses jaringan, gunakan HTTPS/WSS.
 Algoritma Chaos/Vigenere tetap merupakan algoritma demonstrasi.
 
 ## Yang perlu diketahui sebelum presentasi
+
+### Capture frame 1 detik
+
+Di halaman **Penerima**, hubungkan passkey lalu klik **Capture 1 detik · 24 frame**.
+Satu klik menyimpan ketiga tahap serentak ke `captures/<waktu-UTC>_<id>/` pada
+komputer backend: subfolder `pengirim`, `noise`, dan `penerima`, masing-masing
+24 PNG (72 gambar total). Nomor file yang sama berasal dari frame sumber yang sama.
+PNG mempertahankan nilai piksel tanpa kompresi lossy. Hasil penerima menggunakan
+passkey yang aktif saat tombol ditekan, termasuk hasil rusak jika key salah.
+
+Capture mengambil sampel selama 1 detik pada target 24 FPS; FPS kamera aktual
+bisa berbeda. Jika sumber lebih lambat, frame bisa berulang. `metadata.json`
+mencatat nomor frame sumber, waktu sampling aktual, dan kecocokan dekripsi.
+Setiap capture membuat folder baru; folder hasil tidak dimasukkan ke Git.
 
 - Karena demo berjalan di 1 laptop lewat `localhost`, frame di `/noise` dan
   data yang "diterima" di `/penerima` secara data identik — tidak ada

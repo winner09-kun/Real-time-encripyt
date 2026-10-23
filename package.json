@@ -1,0 +1,7 @@
+{
+  "name": "video-dashboard-launcher",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev.mjs"
+  }
+}

@@ -22,6 +22,9 @@ import hashlib
 import hmac
 import secrets
 import time
+import json
+from pathlib import Path
+from datetime import datetime, timezone
 from typing import Literal
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -76,7 +79,66 @@ pipeline: VideoSecurityPipeline | None = None
 passkey_salt = secrets.token_bytes(16)
 passkey_digest: bytes | None = None
 pair_lock = asyncio.Lock()
-sessions: dict[str, float] = {}
+@dataclass
+class Session:
+    expires_at: float
+    role: str
+    decoder: VideoSecurityPipeline
+
+
+sessions: dict[str, Session] = {}
+CAPTURE_ROOT = Path(__file__).resolve().parent.parent / "captures"
+CAPTURE_FPS = 24
+capture_lock = asyncio.Lock()
+
+
+class CaptureRequest(BaseModel):
+    token: str
+
+
+def save_capture(samples, decoder):
+    folder = CAPTURE_ROOT / (datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S_%fZ") + "_" + secrets.token_hex(3))
+    for stage in ("pengirim", "noise", "penerima"):
+        (folder / stage).mkdir(parents=True, exist_ok=False)
+    records = []
+    for index, (original, noise, source_id, elapsed) in enumerate(samples, 1):
+        received = decoder.decrypt_frame(noise)
+        for stage, frame in (("pengirim", original), ("noise", noise), ("penerima", received)):
+            target = folder / stage / f"frame_{index:03d}.png"
+            if not cv2.imwrite(str(target), cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)):
+                raise OSError(f"Gagal menyimpan {target}")
+        records.append({"frame": index, "source_frame": source_id,
+                        "elapsed_ms": round(elapsed * 1000, 3),
+                        "decrypt_ok": bool(np.array_equal(original, received))})
+    metadata = {"target_fps": CAPTURE_FPS, "duration_seconds": 1,
+                "frames_per_stage": len(samples), "frames": records,
+                "note": "Sampling frame terbaru pada target 24 FPS; source_frame berulang jika sumber lebih lambat."}
+    (folder / "metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    return {"folder": str(folder), "frames_per_stage": len(samples), "total_images": len(samples) * 3}
+
+
+@app.post("/capture")
+async def capture_frames(body: CaptureRequest):
+    session = sessions.get(body.token)
+    if session is None or session.expires_at <= time.monotonic() or session.role != "penerima":
+        raise HTTPException(401, "Hubungkan penerima terlebih dahulu.")
+    if capture_lock.locked():
+        raise HTTPException(409, "Capture lain sedang berjalan. Coba lagi setelah selesai.")
+    async with capture_lock:
+        samples = []
+        started = time.monotonic()
+        for index in range(CAPTURE_FPS):
+            await asyncio.sleep(max(0, started + index / CAPTURE_FPS - time.monotonic()))
+            async with state.lock:
+                if state.original is None or state.noise is None:
+                    raise HTTPException(409, "Frame belum tersedia. Aktifkan pengirim terlebih dahulu.")
+                # Capture loop replaces arrays; these references retain the matching pair.
+                samples.append((state.original, state.noise, state.frame_count, time.monotonic() - started))
+        await asyncio.sleep(max(0, started + 1 - time.monotonic()))
+        try:
+            return await asyncio.to_thread(save_capture, samples, session.decoder)
+        except OSError as error:
+            raise HTTPException(500, "Gagal menyimpan capture. Periksa ruang disk dan izin folder captures.") from error
 
 
 class PairRequest(BaseModel):
@@ -94,7 +156,7 @@ async def pair(body: PairRequest):
             hashlib.scrypt, body.passkey.encode("utf-8"), salt=passkey_salt,
             n=16384, r=8, p=1, dklen=32,
         )
-        if passkey_digest is not None and not hmac.compare_digest(digest, passkey_digest):
+        if body.role == "pengirim" and passkey_digest is not None and not hmac.compare_digest(digest, passkey_digest):
             raise HTTPException(401, "Passkey tidak cocok. Masukkan passkey dari pengirim.")
         if passkey_digest is None:
             passkey_digest = digest
@@ -105,18 +167,22 @@ async def pair(body: PairRequest):
                 state.key_ready = True
         now = time.monotonic()
         for token in list(sessions):
-            if sessions[token] <= now:
+            if sessions[token].expires_at <= now:
                 del sessions[token]
         token = secrets.token_urlsafe(32)
-        sessions[token] = now + 12 * 60 * 60
+        sessions[token] = Session(
+            now + 12 * 60 * 60, body.role,
+            VideoSecurityPipeline(x0=X0, r=R, seed_key=body.passkey.encode("utf-8")),
+        )
         return {"token": token}
 
 
-async def authorize_stream(ws: WebSocket) -> str | None:
+async def authorize_stream(ws: WebSocket, role: str | None = None) -> str | None:
     try:
         message = await asyncio.wait_for(ws.receive_json(), timeout=10)
         token = message.get("token") if isinstance(message, dict) else None
-        if isinstance(token, str) and sessions.get(token, 0) > time.monotonic():
+        session = sessions.get(token) if isinstance(token, str) else None
+        if session and session.expires_at > time.monotonic() and (role is None or session.role == role):
             return token
     except (asyncio.TimeoutError, WebSocketDisconnect, ValueError):
         pass
@@ -195,20 +261,26 @@ async def _stream_endpoint(ws: WebSocket, field_name: str):
     await ws.accept()
     token = None
     if field_name != "noise":
-        token = await authorize_stream(ws)
+        token = await authorize_stream(ws, "pengirim" if field_name == "original" else "penerima")
         if token is None:
             return
     try:
         while True:
-            if token is not None and sessions.get(token, 0) <= time.monotonic():
+            session = sessions.get(token) if token else None
+            if token is not None and (session is None or session.expires_at <= time.monotonic()):
                 await ws.close(code=4401, reason="Sesi habis. Masukkan passkey kembali.")
                 return
             async with state.lock:
-                frame = getattr(state, field_name)
+                frame = state.noise if field_name == "decrypted" else getattr(state, field_name)
+                original = state.original
+            decrypt_ok = None
+            if frame is not None and field_name == "decrypted":
+                frame = session.decoder.decrypt_frame(frame)
+                decrypt_ok = bool(np.array_equal(original, frame))
             if frame is not None:
                 payload = _encode_jpeg_b64(frame)
                 if payload:
-                    await ws.send_json({"type": "frame", "data": payload})
+                    await ws.send_json({"type": "frame", "data": payload, "decrypt_ok": decrypt_ok})
             await asyncio.sleep(1 / 25)
     except WebSocketDisconnect:
         pass

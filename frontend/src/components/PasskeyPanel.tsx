@@ -37,10 +37,10 @@ export default function PasskeyPanel({ role, token, onConnect }: {
   return <SidePanel title="HUBUNGKAN DENGAN PASSKEY">
     <p className="page-note">{role === "pengirim"
       ? "Tetapkan passkey pertama untuk sesi server ini, lalu bagikan ke penerima. Jika sudah ditetapkan, gunakan passkey yang sama."
-      : "Masukkan passkey yang ditetapkan pengirim untuk membuka video."}</p>
+      : "Passkey digunakan untuk mendekripsi video. Kunci yang cocok mengembalikan video asli; kunci yang salah tetap menampilkan hasil dekripsi yang rusak/noise."}</p>
     {token ? <div className="passkey-form">
-      <p className="page-note" role="status">Passkey cocok. Akses video terbuka.</p>
-      <button type="button" onClick={() => onConnect(null)}>Kunci kembali</button>
+      <p className="page-note" role="status">{role === "pengirim" ? "Passkey cocok. Pengirim aktif." : "Penerima terhubung. Dekripsi menggunakan passkey yang dimasukkan."}</p>
+      <button type="button" onClick={() => onConnect(null)}>{role === "pengirim" ? "Kunci kembali" : "Ganti passkey"}</button>
     </div> : <form className="passkey-form" onSubmit={submit}>
       <label htmlFor={`passkey-${role}`}>Passkey (8–128 karakter)</label>
       <input id={`passkey-${role}`} type="password" minLength={8} maxLength={128}

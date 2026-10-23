@@ -57,6 +57,7 @@ logs/
 *.7z
 uploads/
 media/
+captures/
 *.mp4
 *.mkv
 *.avi

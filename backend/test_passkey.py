@@ -2,6 +2,8 @@ import unittest
 import numpy as np
 from fastapi import HTTPException
 from pydantic import ValidationError
+from fastapi import WebSocketDisconnect
+from unittest.mock import patch
 import main
 
 
@@ -30,7 +32,7 @@ class PasskeyTests(unittest.IsolatedAsyncioTestCase):
         sender = await main.pair(main.PairRequest(role="pengirim", passkey="password123"))
         self.assertEqual(main.pipeline.vigenere.seed_key.tobytes(), b"password123")
         original_key = main.passkey_digest
-        for role in ("pengirim", "penerima"):
+        for role in ("pengirim",):
             with self.assertRaises(HTTPException) as error:
                 await main.pair(main.PairRequest(role=role, passkey="incorrect123"))
             self.assertEqual(error.exception.status_code, 401)
@@ -42,12 +44,51 @@ class PasskeyTests(unittest.IsolatedAsyncioTestCase):
             socket = Socket(message)
             self.assertIsNone(await main.authorize_stream(socket))
             self.assertEqual(socket.closed, 4401)
-        main.sessions[receiver["token"]] = 0
+        main.sessions[receiver["token"]].expires_at = 0
         self.assertIsNone(await main.authorize_stream(Socket(receiver)))
         frame = np.arange(144, dtype=np.uint8).reshape(6, 8, 3)
         cipher = main.pipeline.encrypt_frame(frame)
         np.testing.assert_array_equal(main.pipeline.decrypt_frame(cipher), frame)
         self.assertFalse(np.array_equal(cipher, frame))
+
+    async def test_receiver_stream_uses_its_own_key(self):
+        await main.pair(main.PairRequest(role="pengirim", passkey="password123"))
+        frame = np.arange(144, dtype=np.uint8).reshape(6, 8, 3)
+        main.state.original = frame
+        main.state.noise = main.pipeline.encrypt_frame(frame)
+        main.state.decrypted = frame
+
+        class FrameSocket(Socket):
+            async def accept(self):
+                pass
+
+            async def send_json(self, payload):
+                self.payload = payload
+                raise WebSocketDisconnect()
+
+        # Multiple receivers stay independent, including after a wrong attempt.
+        wrong = await main.pair(main.PairRequest(role="penerima", passkey="incorrect123"))
+        correct = await main.pair(main.PairRequest(role="penerima", passkey="password123"))
+        for credentials, matches in ((wrong, False), (correct, True), (wrong, False)):
+            socket = FrameSocket(credentials)
+            encoded_frames = []
+
+            def encode(actual):
+                encoded_frames.append(actual.copy())
+                return "encoded-frame"
+
+            with patch.object(main, "_encode_jpeg_b64", side_effect=encode):
+                await main.feed_decrypted(socket)
+            self.assertIsNone(socket.closed)
+            self.assertEqual(socket.payload["decrypt_ok"], matches)
+            self.assertEqual(np.array_equal(encoded_frames[0], frame), matches)
+            expected = main.sessions[credentials["token"]].decoder.decrypt_frame(main.state.noise)
+            np.testing.assert_array_equal(encoded_frames[0], expected)
+
+        # A receiver token must not open the sender's unencrypted feed.
+        socket = FrameSocket(wrong)
+        await main.feed_original(socket)
+        self.assertEqual(socket.closed, 4401)
 
     async def test_trace_uses_demo_not_camera(self):
         main.state.original = np.full((360, 480, 3), 123, dtype=np.uint8)

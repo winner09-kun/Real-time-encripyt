@@ -7,10 +7,12 @@ const WS_BASE = import.meta.env.VITE_WS_BASE ?? "ws://localhost:8000";
 export function useVideoFeed(path: string, token?: string | null, onUnauthorized?: () => void) {
   const [status, setStatus] = useState<FeedStatus>("connecting");
   const [frameSrc, setFrameSrc] = useState<string | null>(null);
+  const [decryptOk, setDecryptOk] = useState<boolean | null>(null);
   const retryRef = useRef<number | null>(null);
 
   useEffect(() => {
     setFrameSrc(null);
+    setDecryptOk(null);
     if (token === null) {
       setStatus("idle");
       return;
@@ -31,6 +33,7 @@ export function useVideoFeed(path: string, token?: string | null, onUnauthorized
           const msg = JSON.parse(evt.data);
           if (msg.type === "frame") {
             setFrameSrc(`data:image/jpeg;base64,${msg.data}`);
+            setDecryptOk(typeof msg.decrypt_ok === "boolean" ? msg.decrypt_ok : null);
             setStatus("streaming");
           }
         } catch {
@@ -43,6 +46,7 @@ export function useVideoFeed(path: string, token?: string | null, onUnauthorized
       ws.onclose = (event) => {
         if (!cancelled) {
           setFrameSrc(null);
+          setDecryptOk(null);
           if (event.code === 4401) {
             setStatus("idle");
             onUnauthorized?.();
@@ -63,5 +67,5 @@ export function useVideoFeed(path: string, token?: string | null, onUnauthorized
     };
   }, [path, token, onUnauthorized]);
 
-  return { status: token === null ? "idle" as const : status, frameSrc: token === null ? null : frameSrc };
+  return { status: token === null ? "idle" as const : status, frameSrc: token === null ? null : frameSrc, decryptOk: token === null ? null : decryptOk };
 }

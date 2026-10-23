@@ -58,3 +58,4 @@
 .passkey-form button:disabled { opacity: 0.5; cursor: wait; }
 .passkey-form input:focus-visible, .passkey-form button:focus-visible { outline: 2px solid var(--ok); }
 .passkey-error { color: var(--err); margin: 0; line-height: 1.5; }
+.capture-path { overflow-wrap: anywhere; }
