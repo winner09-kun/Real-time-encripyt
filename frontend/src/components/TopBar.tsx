@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { to: "/noise", label: "Noise" },
   { to: "/penerima", label: "Penerima" },
   { to: "/proses", label: "Proses" },
+  { to: "/analisa", label: "Analisa Foto" },
 ];
 
 export default function TopBar({ activePath }: { activePath: string }) {

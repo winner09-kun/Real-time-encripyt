@@ -93,7 +93,7 @@ Algoritma Chaos/Vigenere tetap merupakan algoritma demonstrasi.
 ### Capture frame 1 detik
 
 Di halaman **Penerima**, hubungkan passkey lalu klik **Capture 1 detik · 24 frame**.
-Satu klik menyimpan ketiga tahap serentak ke `captures/<waktu-UTC>_<id>/` pada
+Satu klik menyimpan ketiga tahap serentak ke `captures/YYYY-MM-DD_HH-mm-ss_microseconds_WITA/` pada
 komputer backend: subfolder `pengirim`, `noise`, dan `penerima`, masing-masing
 24 PNG (72 gambar total). Nomor file yang sama berasal dari frame sumber yang sama.
 PNG mempertahankan nilai piksel tanpa kompresi lossy. Hasil penerima menggunakan
@@ -103,6 +103,19 @@ Capture mengambil sampel selama 1 detik pada target 24 FPS; FPS kamera aktual
 bisa berbeda. Jika sumber lebih lambat, frame bisa berulang. `metadata.json`
 mencatat nomor frame sumber, waktu sampling aktual, dan kecocokan dekripsi.
 Setiap capture membuat folder baru; folder hasil tidak dimasukkan ke Git.
+
+### Analisa foto
+
+Buka tab **Analisa Foto**, pilih atau ketik nama folder sesi di dalam `captures`,
+lalu klik **Analisa folder**. Tombol muat ulang mengambil daftar capture terbaru.
+Folder lama tetap didukung. Folder harus berisi subfolder `pengirim`, `noise`,
+dan `penerima` dengan PNG bernama sama. Pasangan rusak, hilang, atau berbeda
+ukuran dilaporkan sebagai dilewati.
+
+Analisa menghitung MSE, PSNR, persentase nilai kanal berubah, dan entropi Shannon
+per kanal noise. Kecocokan dekripsi diperiksa persis per nilai RGB. Statistik
+ini bukan bukti keamanan kriptografi atau uji diferensial NPCR/UACI.
+Waktu pembuatan capture dicatat dalam metadata dengan offset UTC+08:00 (WITA).
 
 - Karena demo berjalan di 1 laptop lewat `localhost`, frame di `/noise` dan
   data yang "diterima" di `/penerima` secara data identik — tidak ada

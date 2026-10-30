@@ -24,7 +24,7 @@ import secrets
 import time
 import json
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Literal
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -37,6 +37,7 @@ from pydantic import BaseModel, Field
 
 from crypto_core import VideoSecurityPipeline
 from proses_trace import build_trace
+from photo_analysis import analyze_folder
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -97,7 +98,8 @@ class CaptureRequest(BaseModel):
 
 
 def save_capture(samples, decoder):
-    folder = CAPTURE_ROOT / (datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S_%fZ") + "_" + secrets.token_hex(3))
+    created = datetime.now(timezone(timedelta(hours=8)))
+    folder = CAPTURE_ROOT / created.strftime("%Y-%m-%d_%H-%M-%S_%f_WITA")
     for stage in ("pengirim", "noise", "penerima"):
         (folder / stage).mkdir(parents=True, exist_ok=False)
     records = []
@@ -110,7 +112,7 @@ def save_capture(samples, decoder):
         records.append({"frame": index, "source_frame": source_id,
                         "elapsed_ms": round(elapsed * 1000, 3),
                         "decrypt_ok": bool(np.array_equal(original, received))})
-    metadata = {"target_fps": CAPTURE_FPS, "duration_seconds": 1,
+    metadata = {"created_at": created.isoformat(), "timezone": "Asia/Makassar", "target_fps": CAPTURE_FPS, "duration_seconds": 1,
                 "frames_per_stage": len(samples), "frames": records,
                 "note": "Sampling frame terbaru pada target 24 FPS; source_frame berulang jika sumber lebih lambat."}
     (folder / "metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
@@ -139,6 +141,32 @@ async def capture_frames(body: CaptureRequest):
             return await asyncio.to_thread(save_capture, samples, session.decoder)
         except OSError as error:
             raise HTTPException(500, "Gagal menyimpan capture. Periksa ruang disk dan izin folder captures.") from error
+
+
+@app.get("/analysis/folders")
+def analysis_folders():
+    try:
+        folders = [p for p in CAPTURE_ROOT.iterdir() if p.is_dir()] if CAPTURE_ROOT.exists() else []
+        return {"folders": [p.name for p in sorted(folders, key=lambda p: p.stat().st_ctime_ns, reverse=True)]}
+    except OSError as error:
+        raise HTTPException(500, "Folder captures tidak dapat dibaca. Periksa izin akses folder di komputer backend.") from error
+
+
+class AnalysisRequest(BaseModel):
+    folder: str = Field(min_length=1)
+
+
+@app.post("/analysis")
+def analysis(body: AnalysisRequest):
+    folder = (CAPTURE_ROOT / body.folder).resolve()
+    if not folder.is_relative_to(CAPTURE_ROOT.resolve()) or folder == CAPTURE_ROOT.resolve():
+        raise HTTPException(400, "Pilih folder sesi di dalam captures.")
+    if not folder.is_dir():
+        raise HTTPException(404, "Folder tidak ditemukan.")
+    try:
+        return analyze_folder(folder)
+    except (ValueError, OSError, cv2.error) as error:
+        raise HTTPException(400, "Folder tidak dapat dianalisa. Pastikan berisi PNG pengirim, noise, dan penerima yang valid.") from error
 
 
 class PairRequest(BaseModel):

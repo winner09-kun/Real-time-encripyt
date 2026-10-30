@@ -4,6 +4,7 @@ import Pengirim from "./pages/Pengirim";
 import Noise from "./pages/Noise";
 import Penerima from "./pages/Penerima";
 import Proses from "./pages/Proses";
+import Analisa from "./pages/Analisa";
 
 function Shell() {
   const location = useLocation();
@@ -16,6 +17,7 @@ function Shell() {
         <Route path="/noise" element={<Noise />} />
         <Route path="/penerima" element={<Penerima />} />
         <Route path="/proses" element={<Proses />} />
+        <Route path="/analisa" element={<Analisa />} />
         <Route path="*" element={<Navigate to="/pengirim" replace />} />
       </Routes>
     </>
