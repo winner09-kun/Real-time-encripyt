@@ -30,15 +30,14 @@ export default function CapturePanel({ token, ready }: { token: string | null; r
   }
 
   return <SidePanel title="CAPTURE FRAME">
-    <p className="page-note">Simpan 1 detik pada target 24 FPS: masing-masing 24 PNG pengirim, noise, dan penerima (72 gambar). Hasil penerima memakai passkey saat tombol ditekan.</p>
+    <p className="page-note">Simpan 1 detik (24 frame) pengirim, noise, dan penerima untuk analisa.</p>
     <div className="passkey-form">
       <button type="button" disabled={!token || !ready || busy} onClick={capture}>
         {busy ? "Mengambil & menyimpan frame…" : "Capture 1 detik · 24 frame"}
       </button>
       {!token && <p className="page-note">Hubungkan penerima untuk mulai capture.</p>}
-      {folder && <div role="status" className="page-note">72 gambar tersimpan di komputer backend:<br /><code className="capture-path">{folder}</code></div>}
+      {folder && <div role="status" className="page-note">Tersimpan di:<br /><code className="capture-path">{folder}</code></div>}
       {error && <p role="alert" className="passkey-error">{error}</p>}
     </div>
-    <p className="page-note">Jika sumber lebih lambat dari 24 FPS, sebagian frame dapat berulang. Nomor frame sumber dicatat di metadata.json.</p>
   </SidePanel>;
 }

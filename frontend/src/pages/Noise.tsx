@@ -36,20 +36,6 @@ export default function Noise() {
           <MetricRow label="Permutasi spasial" value="Logistic map (chaos)" />
         </SidePanel>
 
-        <SidePanel title="CATATAN DEMO LOKAL">
-          <p className="page-note">
-            Demo ini berjalan di 1 laptop lewat <code className="mono">localhost</code>.
-            Data yang dikirim = data yang diterima, tidak berubah — tidak ada transformasi
-            yang terjadi selama transmisi lokal. Kotak ini secara data identik dengan
-            "Terima Stream Terenkripsi" di halaman Penerima.
-          </p>
-          <p className="page-note">
-            Kalau nanti berjalan lewat jaringan nyata antar 2 perangkat, baru dua titik
-            ini punya arti operasional berbeda: satu titik kirim, satu titik terima
-            setelah delay jaringan.
-          </p>
-        </SidePanel>
-
         <SidePanel title="METADATA TRANSMISI">
           <MetricRow label="Frame terproses" value={metrics ? String(metrics.frame_count) : "—"} />
           <MetricRow label="Resolusi" value={metrics?.resolution ?? "—"} />

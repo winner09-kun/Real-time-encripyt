@@ -25,13 +25,6 @@ export default function Pengirim() {
 
       <aside className="page-side">
         <PasskeyPanel role="pengirim" token={token} onConnect={setToken} />
-        <SidePanel title="TAHAP ARSITEKTUR">
-          <p className="page-note">
-            Ekstraksi Frame (Piksel) → diteruskan ke Pengacakan Spasial (Chaos).
-            Halaman ini menampilkan aliran video mentah sebelum diproses.
-          </p>
-        </SidePanel>
-
         <SidePanel title="PARAMETER CAPTURE">
           <MetricRow label="Resolusi" value={metrics?.resolution ?? "—"} />
           <MetricRow

@@ -30,13 +30,6 @@ export default function Penerima() {
       <aside className="page-side">
         <PasskeyPanel role="penerima" token={token} onConnect={setToken} />
         <CapturePanel token={token} ready={status === "streaming"} />
-        <SidePanel title="TAHAP ARSITEKTUR">
-          <p className="page-note">
-            Dekripsi Nilai Warna (Vigenere 256) → Dekripsi Spasial (Inverse Chaos)
-            → Rekonstruksi Frame → Bangun Video Asli.
-          </p>
-        </SidePanel>
-
         <SidePanel title="VERIFIKASI">
           <MetricRow
             label="Status dekripsi"
@@ -49,15 +42,6 @@ export default function Penerima() {
             tone={metrics && metrics.latency_ms < 120 ? "ok" : "warn"}
           />
           <MetricRow label="Frame diterima" value={metrics ? String(metrics.frame_count) : "—"} />
-        </SidePanel>
-
-        <SidePanel title="INTEGRITAS SINYAL">
-          <p className="page-note">
-            Video di halaman ini seharusnya identik piksel-per-piksel dengan
-            feed di halaman Pengirim. Kalau kunci awal tidak cocok, status
-            verifikasi di atas akan menampilkan "GAGAL DEKRIPSI" dan hasil
-            dekripsi yang rusak/noise tetap ditayangkan. Pilih Ganti passkey untuk mencoba kunci lain.
-          </p>
         </SidePanel>
       </aside>
     </div>
